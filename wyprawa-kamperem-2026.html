@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Wyprawa kamperem 2026 — dwie opcje do wyboru</title>
+<meta name="description" content="Porównanie dwóch tras kamperem po Alpach: Salzkammergut oraz Karyntia + Włochy. Mapy, plan dzień po dniu, koszty." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,900;1,9..144,500&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+<style>
+  :root{
+    --paper:#f3ede0;
+    --paper-2:#ece3d2;
+    --card:#fbf7ee;
+    --ink:#23301d;
+    --ink-soft:#4a5740;
+    --line:#d7cbb3;
+    --pine:#2f4a32;
+    --pine-deep:#1d3221;
+    --teal:#1f7e74;       /* akcent Opcji A */
+    --teal-deep:#15605a;
+    --terra:#bd5331;      /* akcent Opcji B */
+    --terra-deep:#9a3f23;
+    --gold:#b8893a;
+    --shadow:0 18px 40px -22px rgba(29,50,33,.55);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;
+    background:
+      radial-gradient(120% 90% at 80% -10%, #f7f2e7 0%, transparent 55%),
+      radial-gradient(120% 90% at -10% 110%, #efe6d4 0%, transparent 55%),
+      var(--paper);
+    color:var(--ink);
+    font-family:'Spectral',Georgia,'Times New Roman',serif;
+    font-size:18px;
+    line-height:1.62;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1060px;margin:0 auto;padding:0 22px}
+
+  /* ---------- HERO ---------- */
+  header.hero{
+    position:relative;
+    overflow:hidden;
+    background:
+      linear-gradient(180deg, rgba(29,50,33,.0) 0%, rgba(29,50,33,.12) 100%),
+      linear-gradient(155deg,#27432b 0%, #1d3221 60%, #16261a 100%);
+    color:#f1ead8;
+    border-bottom:4px solid var(--gold);
+  }
+  header.hero::before{
+    /* subtle topographic lines */
+    content:"";position:absolute;inset:0;opacity:.10;
+    background-image:
+      repeating-radial-gradient(circle at 70% 30%, transparent 0 26px, #e9dcc0 26px 27px);
+    mix-blend-mode:overlay;pointer-events:none;
+  }
+  .hero-inner{padding:54px 0 46px;position:relative;z-index:1}
+  .kicker{
+    font-family:'Fraunces',serif;font-weight:600;letter-spacing:.32em;
+    text-transform:uppercase;font-size:13px;color:var(--gold);margin:0 0 14px
+  }
+  h1{
+    font-family:'Fraunces',serif;font-weight:900;font-size:clamp(34px,6vw,62px);
+    line-height:1.02;margin:0 0 12px;letter-spacing:-.01em
+  }
+  h1 .it{font-style:italic;font-weight:500;color:#e8c98a}
+  .lede{font-size:clamp(18px,2.4vw,21px);max-width:60ch;color:#ddd2bb;margin:0}
+  .facts{
+    display:flex;flex-wrap:wrap;gap:10px;margin-top:26px
+  }
+  .fact{
+    display:flex;align-items:center;gap:8px;
+    background:rgba(241,234,216,.08);border:1px solid rgba(241,234,216,.22);
+    padding:7px 14px;border-radius:999px;font-size:14.5px;letter-spacing:.01em
+  }
+  .fact b{font-weight:600;color:#fff}
+
+  /* ---------- TABS ---------- */
+  .tabs{
+    position:sticky;top:0;z-index:1000;
+    background:rgba(243,237,224,.92);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);
+  }
+  .tabs-inner{display:flex;gap:0;max-width:1060px;margin:0 auto;padding:0 14px}
+  .tab{
+    flex:1;appearance:none;border:0;background:transparent;cursor:pointer;
+    font-family:'Fraunces',serif;font-weight:600;font-size:clamp(15px,2.4vw,19px);
+    color:var(--ink-soft);padding:18px 10px 15px;letter-spacing:.01em;
+    border-bottom:3px solid transparent;transition:.18s;line-height:1.15
+  }
+  .tab .lab{display:block;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);margin-bottom:3px;font-weight:600}
+  .tab:hover{color:var(--ink)}
+  .tab[aria-selected="true"]{color:var(--ink)}
+  #tabA[aria-selected="true"]{border-bottom-color:var(--teal)}
+  #tabB[aria-selected="true"]{border-bottom-color:var(--terra)}
+
+  /* ---------- PANELS ---------- */
+  .panel{display:none;padding:40px 0 10px}
+  .panel.active{display:block;animation:fade .35s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  .opt-head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+  .opt-tag{
+    font-family:'Fraunces',serif;font-weight:900;font-size:13px;letter-spacing:.06em;
+    color:#fff;padding:4px 12px;border-radius:6px
+  }
+  .A .opt-tag{background:var(--teal-deep)}
+  .B .opt-tag{background:var(--terra-deep)}
+  h2{font-family:'Fraunces',serif;font-weight:900;font-size:clamp(26px,4.4vw,40px);margin:0;letter-spacing:-.01em;line-height:1.05}
+  .A h2{color:var(--teal-deep)}
+  .B h2{color:var(--terra-deep)}
+  .pitch{font-size:19px;color:var(--ink-soft);max-width:62ch;margin:10px 0 24px;font-style:italic}
+
+  .stat-row{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:26px}
+  .stat{
+    background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:13px 16px;min-width:128px;flex:1 1 128px;box-shadow:var(--shadow)
+  }
+  .stat .n{font-family:'Fraunces',serif;font-weight:900;font-size:23px;line-height:1.1}
+  .A .stat .n{color:var(--teal-deep)} .B .stat .n{color:var(--terra-deep)}
+  .stat .l{font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);margin-top:3px}
+
+  /* ---------- MAP ---------- */
+  .map-shell{
+    border:1px solid var(--line);border-radius:18px;overflow:hidden;
+    box-shadow:var(--shadow);background:var(--card);margin-bottom:14px
+  }
+  .map-bar{
+    display:flex;align-items:center;gap:10px;padding:11px 16px;
+    border-bottom:1px solid var(--line);font-size:13.5px;color:var(--ink-soft);
+    letter-spacing:.03em
+  }
+  .A .map-bar{background:linear-gradient(90deg,rgba(31,126,116,.12),transparent)}
+  .B .map-bar{background:linear-gradient(90deg,rgba(189,83,49,.12),transparent)}
+  .map-bar b{color:var(--ink);font-weight:600}
+  .lmap{height:460px;width:100%}
+  @media(max-width:640px){.lmap{height:380px}}
+  .leaflet-container{font-family:'Spectral',serif;background:#dfe7d8}
+  .leaflet-popup-content-wrapper{border-radius:12px}
+  .leaflet-popup-content{margin:14px 16px;font-size:14.5px;line-height:1.5;color:var(--ink)}
+  .pop-t{font-family:'Fraunces',serif;font-weight:600;font-size:16px;display:block;margin-bottom:4px}
+  .A .pop-t,.popA .pop-t{color:var(--teal-deep)} .popB .pop-t{color:var(--terra-deep)}
+  .pin{
+    display:flex;align-items:center;justify-content:center;
+    width:30px;height:30px;border-radius:50% 50% 50% 2px;transform:rotate(45deg);
+    color:#fff;font-family:'Fraunces',serif;font-weight:900;font-size:14px;
+    box-shadow:0 3px 8px rgba(0,0,0,.35);border:2px solid #fbf7ee
+  }
+  .pin span{transform:rotate(-45deg)}
+  .pinA{background:var(--teal)} .pinB{background:var(--terra)} .pinOpt{background:var(--gold)}
+  .legend-note{font-size:13.5px;color:var(--ink-soft);margin:0 0 30px}
+  .legend-note .dot{display:inline-block;width:11px;height:11px;border-radius:50%;background:var(--gold);margin:0 4px -1px}
+
+  /* ---------- GALLERY ---------- */
+  .pop-img{width:100%;height:120px;object-fit:cover;border-radius:8px;margin:-2px 0 9px;display:block;background:#dfe7d8}
+  .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(238px,1fr));gap:16px;margin:2px 0 4px}
+  .gcard{margin:0;background:var(--card);border:1px solid var(--line);border-radius:15px;overflow:hidden;box-shadow:var(--shadow);display:flex;flex-direction:column}
+  .gphoto{position:relative;aspect-ratio:4/3;overflow:hidden;background:linear-gradient(135deg,var(--pine) 0%,var(--teal-deep) 100%)}
+  .B .gphoto{background:linear-gradient(135deg,var(--pine) 0%,var(--terra-deep) 100%)}
+  .gphoto .gtrack{display:flex;height:100%;width:100%;transition:transform .4s ease}
+  .gphoto .gtrack img{flex:0 0 100%;width:100%;height:100%;object-fit:cover;display:block}
+  .gphoto .gtrack img.broken{visibility:hidden}
+  .cnav{position:absolute;top:50%;transform:translateY(-50%);width:34px;height:34px;border:0;border-radius:50%;background:rgba(20,30,18,.45);color:#fff;font-size:21px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(2px);transition:.18s;opacity:0;z-index:2;font-family:'Fraunces',serif}
+  .gcard:hover .cnav{opacity:1}
+  .cnav.prev{left:8px} .cnav.next{right:8px}
+  .cnav:hover{background:rgba(20,30,18,.78)}
+  .ccount{position:absolute;bottom:9px;right:10px;font-size:11px;color:#fff;background:rgba(20,30,18,.5);padding:2px 9px;border-radius:999px;backdrop-filter:blur(2px);z-index:2;letter-spacing:.04em}
+  @media(hover:none){.cnav{opacity:1}}
+  .gnum{position:absolute;top:10px;left:10px;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:900;font-size:14px;color:#fff;background:rgba(20,30,18,.5);backdrop-filter:blur(2px);border:1.5px solid rgba(255,255,255,.65)}
+  .gcard figcaption{padding:14px 16px 15px}
+  .gcard figcaption h5{font-family:'Fraunces',serif;font-weight:900;margin:0 0 6px;font-size:16.5px;line-height:1.15}
+  .A .gcard figcaption h5{color:var(--teal-deep)} .B .gcard figcaption h5{color:var(--terra-deep)}
+  .gcard figcaption p{margin:0 0 9px;font-size:14px;color:var(--ink-soft);line-height:1.5}
+  .gcard .by{font-size:11px;color:#9a8f78;letter-spacing:.02em;font-style:italic}
+
+  /* ---------- DAYS ---------- */
+  h3{font-family:'Fraunces',serif;font-weight:900;font-size:22px;margin:34px 0 16px;letter-spacing:-.005em}
+  .A h3{color:var(--pine-deep)} .B h3{color:var(--pine-deep)}
+  .days{list-style:none;margin:0;padding:0;position:relative}
+  .days::before{content:"";position:absolute;left:15px;top:8px;bottom:8px;width:2px;background:var(--line)}
+  .day{position:relative;padding:0 0 22px 50px}
+  .day:last-child{padding-bottom:0}
+  .day .dot{
+    position:absolute;left:5px;top:2px;width:22px;height:22px;border-radius:50%;
+    background:var(--card);border:2px solid var(--gold);
+    font-family:'Fraunces',serif;font-weight:900;font-size:11px;
+    display:flex;align-items:center;justify-content:center;color:var(--pine-deep)
+  }
+  .day .dtitle{font-family:'Fraunces',serif;font-weight:600;font-size:16.5px;display:block}
+  .day .ddate{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold);font-weight:600}
+  .day p{margin:3px 0 0;font-size:16px;color:var(--ink-soft)}
+  .day .km{font-size:13px;color:var(--teal-deep);font-weight:600}
+  .B .day .km{color:var(--terra-deep)}
+  .day .dtime{display:inline-flex;align-items:center;gap:6px;margin:6px 0 2px;font-size:12.5px;font-weight:600;letter-spacing:.01em;color:var(--pine-deep);background:rgba(184,137,58,.16);border:1px solid rgba(184,137,58,.4);padding:3px 11px;border-radius:999px;line-height:1.35}
+
+  /* ---------- COST ---------- */
+  .cost{
+    background:var(--card);border:1px solid var(--line);border-left:5px solid var(--gold);
+    border-radius:14px;padding:20px 22px;margin:30px 0 6px;box-shadow:var(--shadow)
+  }
+  .cost h4{font-family:'Fraunces',serif;font-weight:900;margin:0 0 10px;font-size:18px}
+  .cost ul{margin:0;padding-left:20px}
+  .cost li{margin:5px 0;font-size:15.5px}
+  .cost li b{font-weight:600}
+  .tag-opt{font-size:12px;background:var(--gold);color:#fff;padding:1px 8px;border-radius:5px;font-weight:600;letter-spacing:.03em;vertical-align:1px}
+
+  /* ---------- COMPARE ---------- */
+  section.compare{background:var(--pine-deep);color:#eee4cf;margin-top:54px;padding:54px 0;border-top:4px solid var(--gold)}
+  section.compare h2{color:#fff;text-align:center;margin-bottom:6px}
+  section.compare .sub{text-align:center;color:#c9bd9f;margin:0 0 30px;font-style:italic}
+  .ctable{width:100%;border-collapse:collapse;font-size:15.5px;background:rgba(251,247,238,.04);border-radius:14px;overflow:hidden}
+  .ctable th,.ctable td{padding:14px 16px;text-align:left;border-bottom:1px solid rgba(232,217,176,.18);vertical-align:top}
+  .ctable thead th{font-family:'Fraunces',serif;font-size:16px;font-weight:900;background:rgba(0,0,0,.18)}
+  .ctable thead th.cA{color:#7fd6c9} .ctable thead th.cB{color:#f0a07f}
+  .ctable td:first-child,.ctable th:first-child{color:#c9bd9f;font-style:italic;width:24%}
+  .ctable tr:last-child td{border-bottom:0}
+  .ctable td b{color:#fff;font-weight:600}
+  @media(max-width:640px){
+    .ctable{font-size:13.5px} .ctable th,.ctable td{padding:10px 9px}
+    .ctable td:first-child,.ctable th:first-child{width:30%}
+  }
+
+  /* ---------- NOTES ---------- */
+  section.notes{padding:48px 0 70px}
+  section.notes h2{text-align:center;color:var(--pine-deep);margin-bottom:28px}
+  .ncards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+  .ncard{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 22px;box-shadow:var(--shadow)}
+  .ncard h4{font-family:'Fraunces',serif;font-weight:900;margin:0 0 8px;font-size:17px;color:var(--pine-deep)}
+  .ncard p{margin:0;font-size:15px;color:var(--ink-soft)}
+  .ncard .em{color:var(--terra-deep);font-weight:600}
+
+  footer{background:#16261a;color:#9fae93;text-align:center;padding:30px 22px;font-size:13.5px;letter-spacing:.02em}
+  footer b{color:#cdbd97;font-weight:600}
+  .updated{font-size:12px;color:#7e8c74;margin-top:6px}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <p class="kicker">Wyprawa kamperem · lato 2026</p>
+    <h1>Dwie drogi w Alpy.<br><span class="it">Wybierzmy ją razem.</span></h1>
+    <p class="lede">Te same daty, ten sam kamper, ta sama ekipa — dwa zupełnie różne charaktery wyjazdu. Poklikajcie mapy, przejrzyjcie plany i koszty, a potem zdecydujmy wspólnie.</p>
+    <div class="facts">
+      <span class="fact">📅 <b>30.06 – 06.07.2026</b> (wt–pon)</span>
+      <span class="fact">🚐 <b>Benimar Tessoro 463</b> · 5 os.</span>
+      <span class="fact">👨‍👩‍👧 <b>4 dorosłych + dziecko (8 lat)</b></span>
+      <span class="fact">📍 start <b>Białystok</b> · 2 kierowców</span>
+    </div>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tabs-inner" role="tablist">
+    <button class="tab" id="tabA" role="tab" aria-selected="true" aria-controls="panelA">
+      <span class="lab">Opcja A</span>Salzkammergut — kraina jezior
+    </button>
+    <button class="tab" id="tabB" role="tab" aria-selected="false" aria-controls="panelB">
+      <span class="lab">Opcja B</span>Karyntia + skok do Włoch
+    </button>
+  </div>
+</div>
+
+<!-- ============ PANEL A ============ -->
+<main>
+<div class="wrap">
+  <section class="panel A active" id="panelA" role="tabpanel" aria-labelledby="tabA">
+    <div class="opt-head"><span class="opt-tag">OPCJA A</span><h2>Salzkammergut &amp; Salzburg</h2></div>
+    <p class="pitch">Klasyka Austrii — bajkowe górskie jeziora, Hallstatt z pocztówek, platforma 5 Fingers nad przepaścią i miasto Mozarta. Więcej „chodzenia po regionie", krajobrazowo nie do pobicia.</p>
+
+    <div class="stat-row">
+      <div class="stat"><div class="n">~1100 km</div><div class="l">w jedną stronę</div></div>
+      <div class="stat"><div class="n">~3 dni</div><div class="l">w regionie</div></div>
+      <div class="stat"><div class="n">1 kraj</div><div class="l">Austria</div></div>
+      <div class="stat"><div class="n">12,80 €</div><div class="l">winieta AT (10 dni)</div></div>
+    </div>
+
+    <div class="map-shell">
+      <div class="map-bar">🗺️ <b>Mapa interaktywna</b> — kliknij pinezkę, by zobaczyć opis miejsca</div>
+      <div class="lmap" id="mapA"></div>
+    </div>
+    <p class="legend-note"><span class="dot"></span> Pinezka w kolorze złotym = punkt opcjonalny (Zell am See).</p>
+
+    <h3>Zdjęcia miejsc</h3>
+    <div class="gallery" id="galA"></div>
+
+    <h3>Plan dzień po dniu</h3>
+    <ul class="days">
+      <li class="day"><span class="dot">1</span><span class="ddate">wt · 30.06</span><span class="dtitle">Białystok → okolice Brna / Wiednia</span><span class="dtime">🕗 wyjazd ~6:00 · dojazd ~18:30</span><p><span class="km">~850–900 km (~12 h z przerwami).</span> Długi dzień przy dwóch kierowcach. Nocleg po drodze.</p></li>
+      <li class="day"><span class="dot">2</span><span class="ddate">śr · 01.07</span><span class="dtitle">Dojazd do Salzkammergut</span><span class="dtime">🕗 wyjazd ~9:00 · dojazd ~13:00</span><p><span class="km">~300 km (~3,5 h).</span> Zakwaterowanie nad jeziorem, pierwsza kąpiel, spokojny wieczór.</p></li>
+      <li class="day"><span class="dot">3</span><span class="ddate">czw · 02.07</span><span class="dtitle">Hallstatt + Dachstein</span><span class="dtime">🕗 dzień lokalny ~8:30 – 18:00</span><p>Rano Hallstatt (przed 10, później tłumy), po południu kolejka na Krippenstein i platforma 5 Fingers.</p></li>
+      <li class="day"><span class="dot">4</span><span class="ddate">pt · 03.07</span><span class="dtitle">Gosausee + Wolfgangsee</span><span class="dtime">🕗 dzień lokalny ~9:00 – 18:00</span><p>Łatwy spacer wokół Gosausee z widokiem na lodowiec, po południu kąpiel w cieplejszym Wolfgangsee.</p></li>
+      <li class="day"><span class="dot">5</span><span class="ddate">sob · 04.07</span><span class="dtitle">Salzburg, start powrotu</span><span class="dtime">🕗 Salzburg 9:00–13:00 · wyjazd ~13:30 · nocleg ~18:30</span><p>Twierdza, ogrody Mirabell, starówka. Po południu w drogę (~350 km) — nocleg w rejonie Wiednia/Brna.</p></li>
+      <li class="day"><span class="dot">6</span><span class="ddate">nd · 05.07</span><span class="dtitle">Przejazd przez Polskę</span><span class="dtime">🕗 wyjazd ~9:00 · dojazd ~14:00</span><p><span class="km">~350 km — lżejszy dzień.</span> Nocleg pod Krakowem / Katowicami.</p></li>
+      <li class="day"><span class="dot">7</span><span class="ddate">pon · 06.07</span><span class="dtitle">Dojazd do Białegostoku</span><span class="dtime">🕗 wyjazd ~9:00 · dojazd ~15:00</span><p><span class="km">~500 km (~6 h).</span> Koniec wyprawy.</p></li>
+    </ul>
+
+    <div class="cost">
+      <h4>Opłaty drogowe (2026, kamper do 3,5 t)</h4>
+      <ul>
+        <li><b>Czechy lub Słowacja</b> (tranzyt) — winieta 10-dniowa ~50 zł / ~17 €</li>
+        <li><b>Austria</b> — winieta 10-dniowa <b>12,80 €</b>. Trasa do Salzkammergut omija płatne tunele.</li>
+        <li><b>Grossglockner</b> <span class="tag-opt">opcja</span> — przełęcz tylko jeśli wybierzecie Zell am See (~30+ € za auto, spory objazd).</li>
+      </ul>
+    </div>
+  </section>
+
+<!-- ============ PANEL B ============ -->
+  <section class="panel B" id="panelB" role="tabpanel" aria-labelledby="tabB">
+    <div class="opt-head"><span class="opt-tag">OPCJA B</span><h2>Karyntia + skok do Włoch</h2></div>
+    <p class="pitch">Jedna baza nad ciepłym, turkusowym jeziorem — i stąd krótkie wypady do Włoch, Słowenii i na rodzinne atrakcje. Mniej jazdy po regionie, więcej relaksu i „egzotyki" trzech krajów. Łatwiejsza dla pierwszego razu kamperem.</p>
+
+    <div class="stat-row">
+      <div class="stat"><div class="n">~1250 km</div><div class="l">w jedną stronę</div></div>
+      <div class="stat"><div class="n">~3 dni</div><div class="l">z jednej bazy</div></div>
+      <div class="stat"><div class="n">2–3 kraje</div><div class="l">AT + IT (+ SI)</div></div>
+      <div class="stat"><div class="n">24–26°C</div><div class="l">ciepłe jeziora</div></div>
+    </div>
+
+    <div class="map-shell">
+      <div class="map-bar">🗺️ <b>Mapa interaktywna</b> — kliknij pinezkę, by zobaczyć opis miejsca</div>
+      <div class="lmap" id="mapB"></div>
+    </div>
+    <p class="legend-note"><span class="dot"></span> Pinezki w kolorze złotym = punkty opcjonalne / za granicą (Słowenia, Włochy).</p>
+
+    <h3>Zdjęcia miejsc</h3>
+    <div class="gallery" id="galB"></div>
+
+    <h3>Plan dzień po dniu</h3>
+    <ul class="days">
+      <li class="day"><span class="dot">1</span><span class="ddate">wt · 30.06</span><span class="dtitle">Białystok → okolice Wiednia</span><span class="dtime">🕗 wyjazd ~6:00 · dojazd ~18:30</span><p><span class="km">~930 km (~12–13 h z przerwami).</span> Długi dzień przy dwóch kierowcach. Nocleg pod Wiedniem/Brnem.</p></li>
+      <li class="day"><span class="dot">2</span><span class="ddate">śr · 01.07</span><span class="dtitle">Wiedeń → Faaker See (baza)</span><span class="dtime">🕗 wyjazd ~9:30 · dojazd ~13:30</span><p><span class="km">~310 km autostradą A2 (~3,5 h)</span> przez Graz — bez płatnych tuneli. Zakwaterowanie, pierwsza kąpiel.</p></li>
+      <li class="day"><span class="dot">3</span><span class="ddate">czw · 02.07</span><span class="dtitle">Włochy — Tarvisio &amp; Laghi di Fusine</span><span class="dtime">🕗 wyjazd ~9:00 · powrót ~18:00</span><p>Granica ~40 min, zwykłą drogą (bez opłat). Szmaragdowe jeziora + włoska kawa, lody i targ.</p></li>
+      <li class="day"><span class="dot">4</span><span class="ddate">pt · 03.07</span><span class="dtitle">Rodzinna Karyntia</span><span class="dtime">🕗 dzień lokalny ~9:00 – 18:00</span><p>Pyramidenkogel (zjeżdżalnia 52 m!), potem Minimundus lub góra małp Affenberg. Wieczorem jezioro.</p></li>
+      <li class="day"><span class="dot">5</span><span class="ddate">sob · 04.07</span><span class="dtitle">Słowenia / Bled <span class="tag-opt">opcja</span> lub luz</span><span class="dtime">🕗 Bled ~10:00–13:00 · start powrotu ~14:00 · nocleg ~19:00</span><p>Bajkowe jezioro Bled (~1 h) albo leniwy poranek nad wodą. Po południu start powrotu (~360 km do rejonu Wiednia). Wariant z Bledem jest intensywny.</p></li>
+      <li class="day"><span class="dot">6</span><span class="ddate">nd · 05.07</span><span class="dtitle">Przejazd przez Polskę</span><span class="dtime">🕗 wyjazd ~8:30 · dojazd ~15:30</span><p><span class="km">~530 km.</span> Nocleg pod Krakowem / Katowicami.</p></li>
+      <li class="day"><span class="dot">7</span><span class="ddate">pon · 06.07</span><span class="dtitle">Dojazd do Białegostoku</span><span class="dtime">🕗 wyjazd ~9:00 · dojazd ~15:00</span><p><span class="km">~500 km (~6 h).</span> Koniec wyprawy.</p></li>
+    </ul>
+
+    <div class="cost">
+      <h4>Opłaty drogowe (2026, kamper do 3,5 t)</h4>
+      <ul>
+        <li><b>Czechy lub Słowacja</b> (tranzyt) — winieta 10-dniowa ~50 zł / ~17 €</li>
+        <li><b>Austria</b> — winieta 10-dniowa <b>12,80 €</b>. Trasa Wiedeń → A2 → Klagenfurt omija tunele Tauern i Katschberg.</li>
+        <li><b>Włochy</b> — skok do Tarvisio/Fusine zwykłą drogą: <b>0 zł</b>, bez autostrady i winiety.</li>
+        <li><b>Słowenia / Bled</b> <span class="tag-opt">opcja</span> — tunel Karawanken 8,80 € za przejazd + winieta SI 7-dniowa ~16 €.</li>
+      </ul>
+    </div>
+  </section>
+</div>
+</main>
+
+<!-- ============ COMPARE ============ -->
+<section class="compare">
+  <div class="wrap">
+    <h2>A czy B?</h2>
+    <p class="sub">Krótkie zestawienie do wspólnej decyzji</p>
+    <table class="ctable">
+      <thead>
+        <tr><th>Kryterium</th><th class="cA">A · Salzkammergut</th><th class="cB">B · Karyntia + Włochy</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Dystans (1 stronę)</td><td><b>~1100 km</b></td><td><b>~1250 km</b></td></tr>
+        <tr><td>Charakter</td><td>Górskie jeziora, klasyka Austrii, najlepsze widoki</td><td>Ciepłe kąpielowe jeziora + smak Włoch i Słowenii</td></tr>
+        <tr><td>Styl podróży</td><td>Więcej przejazdów między jeziorami</td><td><b>Jedna baza</b>, krótkie wypady — łatwiej na 1. raz</td></tr>
+        <tr><td>Dla 8-latka</td><td>Platforma 5 Fingers, kąpiele</td><td><b>Zjeżdżalnia 52 m</b>, małpy, park miniatur, kąpiele</td></tr>
+        <tr><td>Kraje</td><td>Austria</td><td>Austria + Włochy <b>(+ opcj. Słowenia)</b></td></tr>
+        <tr><td>Woda do kąpieli</td><td>Chłodniejsza, górska</td><td><b>Cieplejsza (24–26°C)</b></td></tr>
+        <tr><td>Dodatkowe opłaty</td><td>Brak (chyba że Grossglockner)</td><td>Tylko jeśli Bled (~33 €)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============ NOTES ============ -->
+<section class="notes">
+  <div class="wrap">
+    <h2>Zanim ruszymy — wspólna checklista</h2>
+    <div class="ncards">
+      <div class="ncard"><h4>Sprawdzić DMC kampera</h4><p>W dowodzie rejestracyjnym. Do <span class="em">3,5 t</span> wszędzie wystarczy zwykła winieta; powyżej — Austria wymaga systemu GO-Box. Pytamy wypożyczalnię.</p></div>
+      <div class="ncard"><h4>Winiety 10-dniowe online</h4><p>Ważne od razu. Roczne kupione przez internet działają dopiero po <span class="em">18 dniach</span> — nie kupujemy ich. Austria: shop.asfinag.at, Czechy: edalnice.cz.</p></div>
+      <div class="ncard"><h4>Kemping = rezerwować TERAZ</h4><p>Początek lipca to szczyt sezonu. Baza nad Faaker See: <span class="em">Strandcamping Anderwald</span>. Noce tranzytowe — proste miejsca Stellplatz.</p></div>
+      <div class="ncard"><h4>Pierwszy raz kamperem</h4><p>Przećwiczyć WC, wodę i prąd jeszcze na placu wypożyczalni. Wysokość ~3 m zapisać przy desce — uwaga na parkingi podziemne i zadaszone stacje.</p></div>
+      <div class="ncard"><h4>Wyposażenie do Czech</h4><p>Kamizelka odblaskowa <span class="em">dla każdego pasażera</span>, trójkąt, apteczka, zapasowe żarówki — Czesi to sprawdzają.</p></div>
+      <div class="ncard"><h4>Do miast bez kampera</h4><p>W Salzburgu i większych miastach zostawiamy pojazd na <span class="em">P+R</span> i wjeżdżamy komunikacją. Tempo na trasie ~100–110 km/h, przerwa co 2 h.</p></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div>Plan poglądowy do wspólnej decyzji · ceny opłat drogowych wg stawek <b>2026</b> dla pojazdów do 3,5 t.</div>
+  <div class="updated">Atrakcje, godziny i ceny biletów warto potwierdzić bliżej terminu wyjazdu.</div>
+</footer>
+
+<script>
+function runApp(){
+  const OSM_URL='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+  const OSM_ATTR='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+
+  function pinIcon(kind,n){
+    return L.divIcon({
+      className:'',
+      html:'<div class="pin pin'+kind+'"><span>'+n+'</span></div>',
+      iconSize:[30,30], iconAnchor:[15,28], popupAnchor:[0,-26]
+    });
+  }
+  function imgURL(p){ return /^https?:/.test(p) ? p : 'https://lh3.googleusercontent.com/'+p; }
+
+  function addPoints(map, pts, optionClass){
+    const group=[];
+    pts.forEach(function(p,i){
+      const kind = p.opt ? 'Opt' : optionClass;
+      const m=L.marker([p.lat,p.lng],{icon:pinIcon(kind,i+1)}).addTo(map);
+      const first = (p.imgs&&p.imgs[0]) ? imgURL(p.imgs[0]) : '';
+      const imgHtml = first ? '<img class="pop-img" src="'+first+'" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display=\'none\'">' : '';
+      m.bindPopup('<div class="pop'+optionClass+'">'+imgHtml+'<span class="pop-t">'+(i+1)+'. '+p.name+'</span>'+p.note+'</div>',{maxWidth:260});
+      group.push([p.lat,p.lng]);
+    });
+    map.fitBounds(group,{padding:[45,45]});
+  }
+
+  function buildGallery(id, pts){
+    const el=document.getElementById(id);
+    if(!el || el.dataset.built) return;
+    el.dataset.built='1';
+    let html='';
+    pts.forEach(function(p,i){
+      const imgs=p.imgs||[];
+      let slides='';
+      imgs.forEach(function(src,k){
+        slides+='<img src="'+imgURL(src)+'" alt="'+p.name+' — zdjęcie '+(k+1)+'" loading="lazy" referrerpolicy="no-referrer" onerror="this.classList.add(\'broken\')">';
+      });
+      const multi=imgs.length>1;
+      const nav=multi
+        ? '<button class="cnav prev" type="button" aria-label="Poprzednie zdjęcie">‹</button><button class="cnav next" type="button" aria-label="Następne zdjęcie">›</button><span class="ccount">1/'+imgs.length+'</span>'
+        : '';
+      html+='<figure class="gcard"><div class="gphoto" data-i="0" data-n="'+imgs.length+'">'+
+              '<div class="gtrack">'+slides+'</div>'+nav+
+              '<span class="gnum">'+(i+1)+'</span></div>'+
+            '<figcaption><h5>'+p.name+'</h5><p>'+p.note+'</p>'+
+            '<span class="by">Zdjęcia: użytkownicy Google Maps</span></figcaption></figure>';
+    });
+    el.innerHTML=html;
+    el.querySelectorAll('.gphoto').forEach(function(ph){
+      const n=parseInt(ph.dataset.n||'1',10);
+      if(n<=1) return;
+      const track=ph.querySelector('.gtrack');
+      const count=ph.querySelector('.ccount');
+      function go(d){
+        let i=parseInt(ph.dataset.i||'0',10)+d;
+        if(i<0)i=n-1; if(i>=n)i=0;
+        ph.dataset.i=i;
+        track.style.transform='translateX(-'+(i*100)+'%)';
+        if(count)count.textContent=(i+1)+'/'+n;
+      }
+      ph.querySelector('.next').addEventListener('click',function(e){e.preventDefault();go(1);});
+      ph.querySelector('.prev').addEventListener('click',function(e){e.preventDefault();go(-1);});
+    });
+  }
+
+  const A=[
+    {lat:47.5624068,lng:13.6492914,name:'Hallstatt',imgs:[
+      'place-photos/AJRVUZM8_ii6-QZyNmeEeMlr8MIuoeaVHwi-ue_tmJy3vzLa7megwfaAV94hpDRK3PnJBqeEx7Oeaj6ek9q4Agn9z3icgmd66y0RC5ZhQzBpG8wP8qtlixC91XGU-eDGiNN0YHwwwPD8duEdVpmhzjs=s4800-w800-h600',
+      'place-photos/AJRVUZNMX9XaNCyumgBfInDpieXYG-EAM1qKolXCgzihXMXqeaPnD399uat_0qIWDqE9v8s4CYUQBUOiaWi1IoTNATKiJwlx5rXaUcXhU-xbkj0-s2BnjEkrSFIITjgL-7rWMBOF5Qwjc51VnMwwPw=s4800-w800-h600',
+      'place-photos/AJRVUZOn62rFo0c_moRbAF0HRP6aa1TB9UrGN9Sf_t7ns3cTZ0V9OLlH-HvsWAkPz25kMIf69b-276XDHXeCDwRLyRN7XxxUgL3GBTkENIBiQvAoQLYXAQy-iSO73bCHuzPxVW7FeBigu_iov0hOzuq0JhU0=s4800-w800-h600',
+      'place-photos/AJRVUZPht5UmyKfLXL67GbbSYRuj-3NL_joLbEtFSVooJAEAPYIMvSxqF_Hm9BcKpn_KU9I2Ve-P-E8OI5eH1FJisX-wsAjd4sYwVlXzy6XG8Pmm2MCxwtbAAQ1N4Pfcr45L4Quo6w67lR4cuegLLQ=s4800-w800-h600'
+    ],note:'Najsłynniejsze miasteczko Austrii nad jeziorem. Przyjedźcie rano (przed 10) lub późnym popołudniem — w środku dnia tłumy. Kamper na parkingu P1/P2, do centrum spacerem lub łódką.'},
+    {lat:47.528612,lng:13.6920417,name:'5 Fingers / Krippenstein',imgs:[
+      'place-photos/AJRVUZPuhVooCuYNErSZdmZ8JuAj8-TQWAG4M7FyFwRHdLBaUTjRM6ljXedgvgq6vpbHIY_140RTUZG42BvumtC-ddmM4qDhU4QcZLiVbsaWaARxadiKOxQyXYJV-_D4C1iO5t2i5eHUmDp7bAzJKA=s4800-w800-h600',
+      'place-photos/AJRVUZPFahJe5CZl6l0Jf5YhqCFczPxSBxSDfVJ_3lWBo0iP3403bNga3JuPAgD7iafN2uT_EVTy4883ZAioAZXN4ae25R4hdouKV2pXO19k-Z3eNDpjlCrcn4xdDgU5azn0mIbLRRNjze-Weawb=s4800-w800-h600',
+      'place-photos/AJRVUZNU1p3Cdqmc8jk8hHJ_kuPC1w9neWrCKSfoze-_Jy2UrMaZd8XHAuDG8PcnT7QZAtGaHrFZwyo5td467XAckfUsQf1Yq8hqgmPmJoR57nzDHC6YINz-4KXRvm1sHkE93ZqjpEYmnxbGELAmVw=s4800-w800-h600',
+      'place-photos/AJRVUZP0QLAPbYxLjEM6BbV15oz4oDhga2lAcJ-EsEFs9LjPKdsxWy9RsvrpsGgMVegE7y3XvGYL8iPh09AaVkDs7QAjaQcYbAk6j_gKZqXYMHPg-SthzMS-gnOA05vPvK2l1CF0AEzx8zrixyEVs5g=s4800-w800-h600'
+    ],note:'Kolejka linowa z Obertraun + platforma widokowa nad przepaścią — hit dla dziecka. W pakiecie jaskinie lodowe. ~44 €/os., ciepłe ubranie nawet latem.'},
+    {lat:47.5286719,lng:13.5064417,name:'Vorderer Gosausee',imgs:[
+      'place-photos/AJRVUZM_Xj8w-IbYonAEjRF7tEvQQp_sXLRpkOqLAT49OlFprvg2rogloMZ6U0rNiiyzzS3OxCXRoY8bbY3umbAuC6DvcwRxDfRAKpe0aDQKLIzbBGSSo1kyky04Ircews9ZHalHxztF27KnHGwT0w=s4800-w800-h600',
+      'place-photos/AJRVUZMbZylcROrPVAG2eSXy_5MmePNwHIrj3jARqxspBE2APInh2Bk6fHj7-dOUA5WIHjvb068T0UQia0KiJ2Vk6QdQnHftGJNDLJexfE7g3u3655GqYe5Jgv7UqXUT8v7Wey63nV7_NEX5Lfnajl0=s4800-w800-h600',
+      'place-photos/AJRVUZNYE5oGMUCrcOBEaeQnD6HnVOo4omFFnmZ2GjFJ9aJX6-K0XM46OeksXiruvwM8hBmgnML8FUnkHZYdgT1eWSC6Sn9NfULUvhC8tIUtl3ikiIHFVPrn2WA9uOq4bbt8uD6KeFQYmYz55lZvyg=s4800-w800-h600',
+      'place-photos/AJRVUZMmm5iJrmxMILGfv47qcRbQZxxScE3Rc79u7omvBY2oeQ34fmun3zZHJXN11dRV0BP_n2wyDlJ5fvgwnNtLuKuihdvZO5CgP6-mGDfrxH_w7K9qEat6pBrqEXgpvaMurniI1SiQQEJHhzyefg=s4800-w800-h600'
+    ],note:'Najpiękniejsze jezioro regionu z widokiem na lodowiec Dachstein. Płaski spacer dookoła (~3 km) idealny z dzieckiem. Woda lodowata, ale przejrzysta.'},
+    {lat:47.7438859,lng:13.4173794,name:'Wolfgangsee / St. Gilgen',imgs:[
+      'place-photos/AJRVUZO5Kks18pBNZURqS2z2Ig89l834eK9OshtAB3KGjAqEwT1kYVmcA1JuP3aCib8aeQqqBwN-BA5mD5F4Phki71DdbVbx9Fm0fjnvYAHMBs-lyofAUkVPvPwc2MWjiMafqnHP7HUigU5XLoGnRQ=s4800-w800-h600',
+      'place-photos/AJRVUZNt5vWwi527E8CAmyA7VDTAGd3po2cmPVlxuo8MkA1qp8iUqid0XREgxZiG6ke0UN2pE63c8GBADCMZZB9xz7g8R9WPpAx1_E0XtYTLxeVhjrns4macx1MVIAGQXGhxTN2NqiolScEpAtTyUA=s4800-w800-h600',
+      'place-photos/AJRVUZNpMhGxxu3aufZdADmkQBkMDhrvLI_wVkr_qbWZeN14ct-s74VvvAHDIy6wIA3iXwf8kR9M7j7be22b1Yrq8O1qb7-3gxQ0_HFrjjjmZaoSbbxcVi0LSNf4idRgLAzyQA_wAQrnPxSsYQHFaYE=s4800-w800-h600',
+      'place-photos/AJRVUZPXZBJz3AYfyAygiJuffrKR7meCaP66JZakl9WH91FsOP2bULxasHarqPuCmtFk10xW3HgwCRw7BY69OJlbTpjzl42SNZfMFHABoWxCJciOg491leeVh9tg7GQ9TaIT6NXl1QctHHe1XcCa0Q=s4800-w800-h600'
+    ],note:'Cieplejsze, kąpielowe jezioro w klimacie „Sound of Music". Plaże, rowerki wodne, kolejka na Schafberg. Świetne na leniwy dzień.'},
+    {lat:47.8014154,lng:13.0448441,name:'Salzburg',imgs:[
+      'place-photos/AJRVUZMRsNNxeK1gjB1gNtGiSQiIt6TvXqJsKsiGPM6_gMsExYN4oH-mX0-FLt3cyD8ESbFGxT3twGQehb-1hc7k5UMi4pxYDVTaCC7UZrXGE9Wk4QpfJKmlQu0mCVY6aSe2JC9vxj_JtYrhFrovHA=s4800-w800-h600',
+      'place-photos/AJRVUZMYK-mWJBMV7hz7Ko5oPyrvhl4RkHzq-YlGviqrW-3K7XR-mYdzNVKbVpgTUhOx4IB_Ds-YNMdCcXHOla7Q_YhUqDk5YUaHjBrIhRpnEjA8PSUzlurPdHyh3vdjY2gzc3CxWknBsdTFiGq5Cjg=s4800-w800-h600',
+      'place-photos/AJRVUZMvFErUg0RMSTNZC2b4IRXqmKlTBpe9GotcvGPHWvMquMTtPaUgCnJcyOGdBJJZ8wdrai6raGw3pxW4tIXJUk0zX6JvQZHH1S0byId2taWXVF5hJoUtc_UN8LXXgei50s_vX1WLkspD9mJBqA=s4800-w800-h600',
+      'place-photos/AJRVUZOaPoDxR1QA0-FUaJznMrb8RtAwnwYOVWzP5iJsQhqcVL9NGwdxnulLzOIKYG1T_VlCq6JykwZKo2f_FXAeWIh6TwNAH-6v9RLWS2n_KH_wzyFuK11_Fg4R_cIvNDXVxEI6aPDyztFHHqOu=s4800-w800-h600'
+    ],note:'Miasto Mozarta — twierdza Hohensalzburg, ogrody Mirabell, starówka. Kamper zostawcie na P+R Salzburg Süd i wjedźcie komunikacją.'},
+    {lat:47.323718,lng:12.8058215,opt:true,name:'Zell am See (opcja)',imgs:[
+      'place-photos/AJRVUZN3DyfOgio8GG3ydUleG9quhsOee9mwFQKNZbc_91P8AV-A2ADr2_kghXHrjecqWn82auNBH2mCA0SnW7n-HBHLMUyRl7Sjgpup4nZMTYGOvKetIegy9h_J8Bky2lNECvofELOlqrNZAWX92B8=s4800-w800-h600',
+      'place-photos/AJRVUZNMz2VWsf4d2zY4W4K6Xn1xtWEBEprHcp2bstbmaNZQ5IXIjYPFb1Ft3P7zNeVan_JjoxENh5TfmDDlMt_TQdcRRcsfcFqIGPndtIrl70fC2KIua2U2j-bYZX0-ORuZbssNatfjG_eNxdJLoaY=s4800-w800-h600',
+      'place-photos/AJRVUZPL0UoHQSlD63acJwB8BRvuBRrXyMcWdUSkr9yVKEOEY2x2vO8omxbVD198y5VUA73NqwIKBR_jrfR1mKaLKqUEfMB5ABU3WM14i85Kb8O_l0bryqyMvYfa4uldALzKH2ufx4kip2ymTGCY6ms=s4800-w800-h600',
+      'place-photos/AJRVUZNtJQZ0DR1CPBWCNfuK6nfPR3FiuaYGCyRWP2LX6WJ4DUZbeNvZJzqiUujUTp0pwuXLB_BI40Kh3u31KiCiF-2rFlJU7WRJjWggy2z6FmJVUIgh3HX2FMl1IMSHIadgR8sXqUtPOkIPZm4mkA=s4800-w800-h600'
+    ],note:'Jeśli ciągnie Was bardziej w góry — ciepłe jezioro do kąpieli i baza pod przełęcz Grossglockner. Bardziej alpejski klimat, ale dokłada przejazdy.'}
+  ];
+  const B=[
+    {lat:46.5737403,lng:13.9334489,name:'Strandcamping Anderwald (baza)',imgs:[
+      'places/ANXAkqH2Np8OXtDMZQgNonJ_0VzUYGfRtrBKpSjFdVGDj2SzMj2QIdQSwJMkJtyDetvxKZJItlDl_tqiAqifPbS2hn87qfzTi5w-UP0=s4800-w800-h600',
+      'place-photos/AJRVUZNdFZuAzGVtg1HwfVqj8qufBx8OS7-9-N9e2DRao45JzeZRScAIXlsewYbTyALaMyLKoHIw788w_4dyribUIIj4bSbqeEsZOTzo7jCCpkad5N2Ky2EX8httiAxb1lE4_bh06QEondK2133duhE=s4800-w800-h600',
+      'places/ANXAkqGF_3lRihsDv5r_LqXvZ8NGmqF1dV47AiMHBJMObgvGySlt37JpKZXZ1p9JdxHv9XW2gPkWeXWu4MK0UNeWOhdhpDP666En6Tg=s4800-w800-h600',
+      'places/ANXAkqGNacQGMFE8KLzwWG6ijgUCpHtxZbU5l__tBcClxX5ydkT2qMtzWPWOQVvqY_1QJVnpaW4cn5dCDbiMAf9WLeIyVoRkzjj1hjU=s4800-w800-h600'
+    ],note:'Rodzinny kemping prosto nad turkusowym Faaker See (ocena 4,7). Plaża, animacje dla dzieci, cień pod drzewami. Bardzo oblegany na początku lipca — REZERWUJCIE TERAZ.'},
+    {lat:46.5841646,lng:13.9190587,name:'Strandbad Drobollach (Faaker See)',imgs:[
+      'places/ANXAkqHwAPJXoOmUOy_9LDYHI5_FySwU4IafuCWOKRxgtcb0llxVBf7m7B5NWATeyF58u6dM723ZeXloe1o8SyqelcGLXdth15CrfYE=s4800-w800-h600',
+      'place-photos/AJRVUZNLgyXSsiefGCLDMWZ_3cNNLjKuckYyH9lt3hUQFbCXQXePBzDilPMPoOapBvBX66XFhwkVTlXAiJIzFwzGWzdW_eQCq73mNMkSE7TjRymgmu0MzeFIcvomOPaMdiUOA6JkGgnNWJbfcltY90E=s4800-w800-h600',
+      'place-photos/AJRVUZOEKmN3gMsHpgNlj3VdZOC-NdcGF7YJG8_R07d7qg5hWx_YCzz4Ae9iiJxicRkEF3fFBN_phTON2rk5gVIitroo4s2JmGVr2BG1mIv1xkXZmLQUcte0DXGp4ECtGmn0d84Ev2rhfnO6GWnjPw=s4800-w800-h600',
+      'place-photos/AJRVUZOBaeTsPr_8jYBtI71Eq-G3VCEi6hYeRkL0l0G5t_X3KwKn8hhUSYQntz9GIIXlWqtIUCe2KfNYJpsMRaiGLY5PAfOGxysQfZ1HKnll02yxe54LwsSLvQ2AuEgGPzQ9RjnAWRBIr81EGGWwtA=s4800-w800-h600'
+    ],note:'Kąpielisko nad jeziorem o ciepłej, turkusowej wodzie. Zjeżdżalnia do wody, wypożyczalnia rowerków, park ze zwierzętami. Idealne na leniwy dzień.'},
+    {lat:46.6090208,lng:14.1450805,name:'Pyramidenkogel',imgs:[
+      'places/ANXAkqG31k5KqmLuzvS3UinHAH_TwtReqdlIONbncVjZiOmtd86NGCKGeBPumSyGbuuSC8258S_-V-tSpW3S7vg182ILPISJhj84uW0=s4800-w800-h600',
+      'place-photos/AJRVUZPhQASC3X6VOlJt0iZVF9_FunJaLU6qId7RBBKPLHhRfpmluuR_E0bwEqJRn-Mi4MFey-oJeSp8xVuHE_Z500kNPum735XeQrCpQ82ub2c1kLCAKIIPri_j7zL_39JrKeRfp_qY50vnKOtIsA=s4800-w800-h600',
+      'place-photos/AJRVUZN4ky7-OuQTVrYFzjQbokTiXrQRXfGKmR8HjbjxYx4t23nYArh_eHUaJV2LdG0PXuo0n6wE-MSqnlH8dzVTHPPR4AzuOx9JOSSQjUfPWwWzdrNift8h3G6Kw0tdgg4kftvaLZGsdK2TaPvzKg=s4800-w800-h600',
+      'place-photos/AJRVUZMY4QgQHPIeaIjSzsky72r3EN93WsZX0VNoatTvYPUxIF-Wx9utv0nnWM5TamZRE_upRelYKaqbBVlO-6b_WAGAq6t5Yf6N7YFE8MnX8hg_7tdLbl65fp7fmw0OJ3MP5PcHg-fmlaolCEQzp9g=s4800-w800-h600'
+    ],note:'Drewniana wieża widokowa nad Wörthersee z najwyższą krytą zjeżdżalnią w Europie (52 m, zjazd rurą w środku wieży). Absolutny hit dla 8-latka. Bilet ~15 €.'},
+    {lat:46.6197892,lng:14.2644388,name:'Minimundus, Klagenfurt',imgs:[
+      'places/ANXAkqHU39ovnNvVcSdMpcIntpG7NSUOtsRKcjRWo7WeOJvPm66dw7DalSSqPItX4UDzDfuZKCXKIAUDCkvwzvtKvi2yr2ZYhmU9_og=s4800-w800-h600',
+      'place-photos/AJRVUZOUyJzx_WZBC-lZY019nErFg0k-dEc080s4zAvi-yYO2yW4JY-KZYdxFI1pfVdqp4aytW_D5HdzAphs1magr1KB2QL6T_nwBk1LcepxY07FgyKM0VV9rjC-mT05CZLD0wL4VWcnI6Ho_eaOyRo=s4800-w800-h600',
+      'place-photos/AJRVUZN53y4huFIbBU6NjheIxchVRgbESPz8yy7qc82M9obv5gHWrc3dKQmEeHYyL5y4VyZ03aqK0qv5eI4DdH4EtNIP8bfDoZSJWTTEKH8D7R2PlHiRoE4tpF5CzAaqPOyjG1D2AdXleZQsss2NbA=s4800-w800-h600',
+      'place-photos/AJRVUZO3pyKPFEL3anOa1VOXWe5LF2Q0-Y1jUthI1xo-a1vCJW6jTN7JS28gnqyzw6V2vkM9NicmPCCEsSJnRabHqYPnNWYHH7zHCMoeSZW3QP6C0kZCI8dLUnV58AKlONw-TOQTRal3RHwRZGx6jg=s4800-w800-h600'
+    ],note:'Park miniatur — cały świat w jednym ogrodzie (Eiffel, piramidy, „startujący" prom kosmiczny). Ruchome modele, 2–3 h zabawy. Bilet ~21 € dor.'},
+    {lat:46.644111,lng:13.89935,name:'Affenberg Landskron',imgs:[
+      'places/ANXAkqGD1V6uvvt4WsSZHAYJ7oQJoe_-ESfz6XILNfwk1kN9i3CgfdNppEn5qmlk1SuX0VfJlSkubIO0Wijgiq35H0d1c5CWc-Z49lg=s4800-w800-h600',
+      'place-photos/AJRVUZNRSuH2-RwNPBa_fPjwvjx-Ia2ZHKC62zLszltZjXrjz-C2n1__7ivW8jP-8xKSRQo_dji0DtibTHBLsL4A1Yt_YtwcTQW3bi6yB0G_YCTklZu0Uqass6lWvNM_8UG-AypozeNXYOzkjS9N=s4800-w800-h600',
+      'place-photos/AJRVUZO7A6DdDROYFceVIac0wo9Wygnr0CXaPvZx0mFjqyjfbb9797OKIA9SBgiFWlHqNy9GyJtEoAR0iXxuR-8YkA8o0jSeyvIvqPZaVgf6_9-cuVyZsuXz8ArnqavkDbBSzY3H2_6wZN2UJAg_spg=s4800-w800-h600',
+      'place-photos/AJRVUZMwIXyCy2Q78EasM4LU9aDDiq1l5dvI_aX9909xmQRSWGalTABdB86rk_wzELqhKKB6vjd_LlIGLQ8GzZeybJki7IiCWWZzl7JLMxpicCFj-xMyGe3jkkKCrtRLqa4zXLHo_Zk4p8mcpupOs-Q=s4800-w800-h600'
+    ],note:'Góra małp — ~150 makaków japońskich biegających swobodnie wokół zwiedzających. Zwiedzanie z przewodnikiem ~40 min, ~17 €. Obok zamek z pokazami lotów orłów.'},
+    {lat:46.4797222,lng:13.6705556,opt:true,name:'Laghi di Fusine (Włochy)',imgs:[
+      'place-photos/AJRVUZMHTTLKyN9xFR004Ye1GPAi4lco_UI2u_WY2wLyGGVfcAKxRzSOfQdmy3Xf4yCl7Mmr-Z-nsrH_F9e3OGT6Q0BSlgDhLumbVwY1UwHZNPrEJfl241OBvhCd_0rVaJplDn3MmYbyoQYR42oXtA=s4800-w800-h600',
+      'place-photos/AJRVUZPw3PsJ_hQLSzcAmEMV8Xo2o_OzREzfJMBcQMZ4aKp9gr2kStKatpu15qVTZ4uBBDCm56wNFxYG8KYkD70vbJtTDBmOaH5TPAlCYBt0zcjxPT2Mo-tQ-ebEXO-Wfao8O6z1f0KR5K4Fd3Yo4Q=s4800-w800-h600',
+      'place-photos/AJRVUZOhAzEN9ZuVXWhVQWWpOXuvTZ9To2_UyZgH5yu00eHMxA_y-UJ4yDq4nqWsqt_Q1OLt50990stVLvRp93chGTP-i8TeyAc4D4CmosiFMUnZ3tNd89m-cQoJd0q0FhV3zkcFwh2_bYfPg6tCjg=s4800-w800-h600',
+      'place-photos/AJRVUZNpuU1tMIDuuN12VQev7bsvatr6FIBOj7jyTcaAy6d6jI3mXLEQK-NSFx23lOUTXdalOl6ET5Qp86DqJvNSlj5RMG_JAnUCUsrIBKelYTd4pKdyIquvq_BoEsSCFNdF1IJTV3EepfMHD3xY=s4800-w800-h600'
+    ],note:'Dwa szmaragdowe jeziora tuż za włoską granicą (~40 min od bazy). Łatwa, płaska pętla (~2 km) z widokiem na Alpy Julijskie. Parking ~5 €. Kąpiel zakazana (rezerwat).'},
+    {lat:46.5054233,lng:13.5720263,opt:true,name:'Tarvisio (Włochy)',imgs:[
+      'place-photos/AJRVUZMPxTHIz99pGZB5eqidLDStC0TIDAg-P_7P34xG8t10AjLaZ48doT6krcDcfGXR5UTZAhy68VuuE4brDHLBB2ybpvJtrqsRpW9y5fSB3wNWQF_uqkXkdf4tY1vmlDyKiMvF8uXw7qVRjEraaA=s4800-w800-h600',
+      'place-photos/AJRVUZNXwRulani_7oqEmQ_dCSCHc9iuRtPI_q9FVgRKPv6X3jMZJBTFlD11mWalWpUyirp0oHOfJN0Vvjr7w0zDJuH2httE-Zo8QO5dgFshEGhK2obqt6MHQZ7cFqw4mfFXGjlPmg6p5wObqpO8=s4800-w800-h600',
+      'place-photos/AJRVUZMSvT2GbJMeji1_BsTxmyP9WxSlx9BazGogh6iaDxC_Nf8OWbMw5WmFjEYApM2B3rWmJ_nn0UgjPXww1hozp4gO-MgcUIB0145ce_YTKJCkmK79hY23xtJQDFdyJdvfL-jAzjkNEcVQaJfbJA=s4800-w800-h600',
+      'place-photos/AJRVUZPCLxp-dyN1PM1y2m9WKb0JeVjrcZt3t5UzZC6ZLZd-5LTXgA21RznSYfyqj6KwJyUl8-4yUmGyOaZfqzCiiVn5GgnDw1jP-ROG11ZyAml5QlYEsWmP0nXchoxc_ZO1r9rHu5sfqL0wRW1kzQ=s4800-w800-h600'
+    ],note:'Włoskie miasteczko przy granicy — sobotni targ, włoska kawa, lody i pizza. „Dotknięcie Włoch" zwykłą drogą, bez opłat autostradowych.'},
+    {lat:46.363598,lng:14.0938053,opt:true,name:'Jezioro Bled (Słowenia)',imgs:[
+      'place-photos/AJRVUZNbELyEfw6Kd0_sj1j1KWWXz0yfzGsoeqs9H1wDAm_H6fnu432TmzGZI0N6KHBli6xgA8QExHh19sVT6Db2jbVlDax780xQiqP0YngZ90Jm-GAcpW8noVEfn1Q04azdpb4r9h0Ja_E62MQ0bUs=s4800-w800-h600',
+      'place-photos/AJRVUZMqmhcpXKvPWaLiRK9_H677WpxlQSW2MubMJMYmYrk31swFCOnIfnnDQ7b9D_k63b_wpCFAY3QbYzL4poutb7XzSPuqEQlDvOfCJr_2g0Sl5tFddT2rTHB-4xyHm7miAEdckhXdzv7pK8aeM5mS32T7=s4800-w800-h600',
+      'place-photos/AJRVUZOgwUwDGwRlm2snCVeyQnGrPNnEi-dCcDRm238wyESfKmu1_Y2Cv5F5q8ZGOQ25TwDXwk0FJp2p8O4xxxZg9Q2Pgm6soYIr_oBHptcQGiNq3cFHJWjsuUjDPJQ_FPX3igckQq9EH05PdZt0=s4800-w800-h600',
+      'place-photos/AJRVUZMmw0eEEzwpZu0-h4RxuL6H8PL-jA5lW34k_3C22n8_hvv_lom5EHD7C8GWsKPPLIaPM7_kehcxrZaN-Cvkr6Cglynd_idOtt9ZshjC5PIY4NebyPlf3vSok3VMVv2CVmfmBst68_S_aU2EGw=s4800-w800-h600'
+    ],note:'OPCJA — bajkowe jezioro z wysepką i kościółkiem (~1 h od bazy). Dojazd przez tunel Karawanken (8,80 €/przejazd) + winieta SI 7-dniowa (~16 €). Łyk trzeciego kraju.'}
+  ];
+
+  let mapA=null, mapB=null;
+  function initA(){
+    if(mapA) return;
+    mapA=L.map('mapA',{scrollWheelZoom:false});
+    L.tileLayer(OSM_URL,{attribution:OSM_ATTR,maxZoom:17}).addTo(mapA);
+    addPoints(mapA,A,'A');
+    buildGallery('galA',A);
+  }
+  function initB(){
+    if(mapB) return;
+    mapB=L.map('mapB',{scrollWheelZoom:false});
+    L.tileLayer(OSM_URL,{attribution:OSM_ATTR,maxZoom:17}).addTo(mapB);
+    addPoints(mapB,B,'B');
+    buildGallery('galB',B);
+  }
+
+  // tabs
+  const tabA=document.getElementById('tabA'), tabB=document.getElementById('tabB');
+  const panA=document.getElementById('panelA'), panB=document.getElementById('panelB');
+  function select(which){
+    const isA = which==='A';
+    tabA.setAttribute('aria-selected',isA); tabB.setAttribute('aria-selected',!isA);
+    panA.classList.toggle('active',isA); panB.classList.toggle('active',!isA);
+    if(isA){ initA(); setTimeout(function(){mapA.invalidateSize();},60); }
+    else   { initB(); setTimeout(function(){mapB.invalidateSize();},60); }
+  }
+  tabA.addEventListener('click',function(){select('A');});
+  tabB.addEventListener('click',function(){select('B');});
+
+  // init default
+  initA();
+  setTimeout(function(){ if(mapA) mapA.invalidateSize(); },150);
+}
+
+// --- Bootstrap: upewnij się, że Leaflet (L) jest dostępny, z awaryjnym CDN ---
+(function(){
+  function start(){ try{ runApp(); }catch(e){ console.error(e); } }
+  function ready(fn){
+    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',fn);
+    else fn();
+  }
+  function whenLeaflet(){
+    if(window.L){ ready(start); return; }
+    // awaryjne źródło, jeśli pierwsze CDN nie wczytało biblioteki
+    if(!document.getElementById('leaflet-fallback-js')){
+      if(!document.getElementById('leaflet-fallback-css')){
+        var lk=document.createElement('link');
+        lk.id='leaflet-fallback-css'; lk.rel='stylesheet';
+        lk.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        document.head.appendChild(lk);
+      }
+      var s=document.createElement('script');
+      s.id='leaflet-fallback-js';
+      s.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      s.onload=function(){ ready(start); };
+      document.head.appendChild(s);
+      return;
+    }
+    setTimeout(whenLeaflet,200); // jeszcze chwilę poczekaj
+  }
+  whenLeaflet();
+})();
+</script>
+</body>
+</html>
